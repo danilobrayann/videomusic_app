@@ -1,0 +1,12 @@
+{
+    "name": "Personalizado 89",
+    "bg_color": "#16151d",
+    "sidebar_color": "#1e1c27",
+    "card_color": "#272434",
+    "card_hover": "#322f42",
+    "accent_color": "#0000ff",
+    "accent_hover": "#0000ff",
+    "text_color": "#f8f9fa",
+    "subtext_color": "#a8a5b8",
+    "border_color": "#0000ff"
+}

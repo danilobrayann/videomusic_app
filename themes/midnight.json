@@ -1,0 +1,12 @@
+{
+  "name": "Midnight OLED",
+  "bg_color": "#000000",
+  "sidebar_color": "#0a0a0a",
+  "card_color": "#141414",
+  "card_hover": "#222222",
+  "accent_color": "#3b82f6",
+  "accent_hover": "#60a5fa",
+  "text_color": "#ffffff",
+  "subtext_color": "#888888",
+  "border_color": "#333333"
+}

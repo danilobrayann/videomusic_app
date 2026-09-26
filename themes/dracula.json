@@ -1,0 +1,12 @@
+{
+  "name": "Dracula Violet",
+  "bg_color": "#282a36",
+  "sidebar_color": "#21222c",
+  "card_color": "#44475a",
+  "card_hover": "#50546c",
+  "accent_color": "#bd93f9",
+  "accent_hover": "#ff79c6",
+  "text_color": "#f8f8f2",
+  "subtext_color": "#6272a4",
+  "border_color": "#bd93f9"
+}

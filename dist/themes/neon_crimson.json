@@ -1,0 +1,12 @@
+{
+    "name": "Neon Crimson",
+    "bg_color": "#150a0f",
+    "sidebar_color": "#220e18",
+    "card_color": "#331624",
+    "card_hover": "#471e32",
+    "accent_color": "#f43f5e",
+    "accent_hover": "#fb7185",
+    "text_color": "#fff1f2",
+    "subtext_color": "#fda4af",
+    "border_color": "#e11d48"
+}

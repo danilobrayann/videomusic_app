@@ -1,0 +1,12 @@
+{
+    "name": "Emerald Forest",
+    "bg_color": "#0b1a13",
+    "sidebar_color": "#12291f",
+    "card_color": "#1b3d2f",
+    "card_hover": "#24523f",
+    "accent_color": "#10b981",
+    "accent_hover": "#34d399",
+    "text_color": "#f0fdf4",
+    "subtext_color": "#86efac",
+    "border_color": "#059669"
+}

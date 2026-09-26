@@ -1,0 +1,12 @@
+{
+    "name": "Personalizado 771",
+    "bg_color": "#003302",
+    "sidebar_color": "#1e1c27",
+    "card_color": "#272434",
+    "card_hover": "#322f42",
+    "accent_color": "#ff0073",
+    "accent_hover": "#ff008a",
+    "text_color": "#f8f9fa",
+    "subtext_color": "#a8a5b8",
+    "border_color": "#ff0073"
+}
