@@ -1,0 +1,12 @@
+{
+    "name": "Cyberpunk 2077 (Gamer Neon)",
+    "bg_color": "#090a10",
+    "sidebar_color": "#10121d",
+    "card_color": "#171a29",
+    "card_hover": "#22273d",
+    "accent_color": "#00f0ff",
+    "accent_hover": "#38f5ff",
+    "text_color": "#ffffff",
+    "subtext_color": "#8b9bb4",
+    "border_color": "#00f0ff"
+}

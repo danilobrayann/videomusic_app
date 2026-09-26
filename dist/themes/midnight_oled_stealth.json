@@ -1,0 +1,12 @@
+{
+    "name": "Midnight OLED Stealth",
+    "bg_color": "#000000",
+    "sidebar_color": "#080808",
+    "card_color": "#111111",
+    "card_hover": "#1c1c1c",
+    "accent_color": "#38bdf8",
+    "accent_hover": "#7dd3fc",
+    "text_color": "#ffffff",
+    "subtext_color": "#737373",
+    "border_color": "#262626"
+}

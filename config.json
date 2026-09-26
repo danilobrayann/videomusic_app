@@ -1,6 +1,12 @@
 {
-    "theme": "Laranje (Vencord Style)",
-    "wallpaper_path": null,
-    "wallpaper_dim": 0.45,
-    "download_dir": "C:\\Users\\danil\\Downloads"
+    "theme": "Cyberpunk 2077 (Gamer Neon)",
+    "wallpaper_path": "C:/Users/danil/OneDrive/Imagens/cardinal-bird-5k-24.jpg",
+    "wallpaper_dim": 0.3857142857142857,
+    "wallpaper_blur": 0,
+    "transparency_mode": "transparent",
+    "window_alpha": 1.0,
+    "download_dir": "C:\\Users\\danil\\Downloads",
+    "create_playlist_folder": true,
+    "last_iptv_url": "https://www.youtube.com/watch?v=ibTKWr7ej8c",
+    "iptv_engine": "auto"
 }

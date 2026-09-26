@@ -1,6 +1,12 @@
 {
-    "theme": "Personalizado 89",
+    "theme": "Laranje (Vencord Gamer)",
     "wallpaper_path": "C:/Users/danil/OneDrive/Imagens/legendary-master-kakashi-5k-uf.jpg",
     "wallpaper_dim": 0.45,
-    "download_dir": "C:\\Users\\danil\\Downloads"
+    "wallpaper_blur": 0,
+    "transparency_mode": "solid",
+    "window_alpha": 1.0,
+    "download_dir": "C:\\Users\\danil\\Downloads",
+    "create_playlist_folder": true,
+    "last_iptv_url": "nasa.gov/multimedia/nasatv",
+    "iptv_engine": "auto"
 }

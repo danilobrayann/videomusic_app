@@ -1,0 +1,47 @@
+[
+  {
+    "name": "NASA TV (Ciência & Espaço)",
+    "url": "https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8",
+    "category": "Ciência / Documentários"
+  },
+  {
+    "name": "Red Bull TV (Esportes & Ação)",
+    "url": "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8",
+    "category": "Esportes & Ação"
+  },
+  {
+    "name": "Euronews Português (Notícias)",
+    "url": "https://euronews-euronews-portuguese-1-pt.samsung.wurl.tv/playlist.m3u8",
+    "category": "Notícias"
+  },
+  {
+    "name": "TV Brasil (Ao Vivo)",
+    "url": "https://tvbrasil-hls.ebc.com.br/hls/tvbrasil.m3u8",
+    "category": "Variedades & Cultura"
+  },
+  {
+    "name": "Record News HD (Notícias 24h)",
+    "url": "https://stream.recordnews.com.br/hls/recordnews.m3u8",
+    "category": "Notícias"
+  },
+  {
+    "name": "SBT Ao Vivo",
+    "url": "https://sbt-live.akamaized.net/hls/live/2026723/sbt/master.m3u8",
+    "category": "Entretenimento"
+  },
+  {
+    "name": "Al Jazeera English (Global News)",
+    "url": "https://live-hls-web-aje.getaj.net/AJE/01.m3u8",
+    "category": "Notícias"
+  },
+  {
+    "name": "Anime & Cartoons (Pluto TV)",
+    "url": "https://service-stitcher.clusters.pluto.tv/v1/stitch/hls/channel/5dfbcf04071ec20009c95353/master.m3u8",
+    "category": "Anime & Desenhos"
+  },
+  {
+    "name": "Lofi Hip Hop Radio (Live YouTube)",
+    "url": "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+    "category": "Música & Relax"
+  }
+]

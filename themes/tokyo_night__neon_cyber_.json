@@ -1,0 +1,12 @@
+{
+    "name": "Tokyo Night (Neon Cyber)",
+    "bg_color": "#1a1b26",
+    "sidebar_color": "#16161e",
+    "card_color": "#24283b",
+    "card_hover": "#2f354f",
+    "accent_color": "#7aa2f7",
+    "accent_hover": "#89ddff",
+    "text_color": "#c0caf5",
+    "subtext_color": "#7982a9",
+    "border_color": "#bb9af7"
+}

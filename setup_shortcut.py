@@ -53,8 +53,8 @@ def install_shortcuts():
     # Garante que o ícone exista
     if not os.path.exists(icon_path):
         try:
-            from create_icon import generate_default_icon
-            generate_default_icon(icon_path)
+            from create_icon import generate_gamer_icon
+            generate_gamer_icon(icon_path)
         except Exception:
             pass
 

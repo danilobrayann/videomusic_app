@@ -1,0 +1,12 @@
+{
+    "name": "Alienware Frost (Ice Blue)",
+    "bg_color": "#080c14",
+    "sidebar_color": "#0d1422",
+    "card_color": "#131d31",
+    "card_hover": "#1d2c49",
+    "accent_color": "#00b4d8",
+    "accent_hover": "#48cae4",
+    "text_color": "#e0f2fe",
+    "subtext_color": "#7dd3fc",
+    "border_color": "#00b4d8"
+}

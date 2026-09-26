@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('themes', 'themes'), ('app_icon.ico', '.')]
+datas = [('themes', 'themes'), ('app_icon.ico', '.'), ('iptv_channels.json', '.')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('customtkinter')

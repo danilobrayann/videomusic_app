@@ -1,0 +1,12 @@
+{
+    "name": "Aura Glass (Minimalista)",
+    "bg_color": "#0b0d14",
+    "sidebar_color": "#111420",
+    "card_color": "#181d2e",
+    "card_hover": "#232a42",
+    "accent_color": "#6366f1",
+    "accent_hover": "#818cf8",
+    "text_color": "#f1f5f9",
+    "subtext_color": "#94a3b8",
+    "border_color": "#6366f1"
+}

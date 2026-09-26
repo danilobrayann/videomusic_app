@@ -14,7 +14,7 @@ python create_icon.py
 
 echo.
 echo [3/4] Compilando executavel com PyInstaller (Isso pode levar alguns segundos)...
-pyinstaller --noconsole --onefile --icon=app_icon.ico --name="VideoMusicStudio" --collect-all customtkinter --add-data="themes;themes" --add-data="app_icon.ico;." app.py
+pyinstaller --noconsole --onefile --icon=app_icon.ico --name="VideoMusicStudio" --collect-all customtkinter --add-data="themes;themes" --add-data="app_icon.ico;." --add-data="iptv_channels.json;." app.py
 
 echo.
 echo [4/4] Atualizando atalhos do Windows para apontar para o novo .EXE...

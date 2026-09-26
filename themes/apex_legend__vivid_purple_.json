@@ -1,0 +1,12 @@
+{
+    "name": "Apex Legend (Vivid Purple)",
+    "bg_color": "#0e0919",
+    "sidebar_color": "#150d26",
+    "card_color": "#20143a",
+    "card_hover": "#2e1c53",
+    "accent_color": "#a855f7",
+    "accent_hover": "#c084fc",
+    "text_color": "#faf5ff",
+    "subtext_color": "#c084fc",
+    "border_color": "#a855f7"
+}

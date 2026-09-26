@@ -1,0 +1,12 @@
+{
+    "name": "Laranje (Vencord Gamer)",
+    "bg_color": "#121118",
+    "sidebar_color": "#181622",
+    "card_color": "#211e2e",
+    "card_hover": "#2c283d",
+    "accent_color": "#ff6600",
+    "accent_hover": "#ff8533",
+    "text_color": "#f8f9fa",
+    "subtext_color": "#a8a5b8",
+    "border_color": "#ff6600"
+}

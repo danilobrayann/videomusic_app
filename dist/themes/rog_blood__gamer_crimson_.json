@@ -1,0 +1,12 @@
+{
+    "name": "ROG Blood (Gamer Crimson)",
+    "bg_color": "#0e0608",
+    "sidebar_color": "#170a0e",
+    "card_color": "#241016",
+    "card_hover": "#361822",
+    "accent_color": "#ff0044",
+    "accent_hover": "#ff3366",
+    "text_color": "#fff0f3",
+    "subtext_color": "#c27d8e",
+    "border_color": "#ff0044"
+}
