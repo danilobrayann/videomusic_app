@@ -85,6 +85,8 @@ class VideoMusicApp:
         self.is_paused = False
         self.is_video_playing = False
         self.library_video_player = None
+        self.library_video_height = 420
+        self.library_video_expanded = False
         self.playback_color_after = None
 
         # Estado do Player IPTV / Live
@@ -1533,21 +1535,64 @@ class VideoMusicApp:
         ) if ctk else tk.Label(head_box, text="[ MÍDIA LOCAL ]", fg=self.theme["accent_color"])
         tag_pl.pack(side="right", padx=6)
 
+        video_toolbar = ctk.CTkFrame(head_box, fg_color="transparent") if ctk else tk.Frame(head_box, bg=self.theme["card_color"])
+        video_toolbar.pack(side="right", padx=(0, 8))
+
+        self.btn_video_smaller = ctk.CTkButton(
+            video_toolbar,
+            text="−",
+            width=34,
+            height=30,
+            corner_radius=8,
+            fg_color=self.get_card_hover_color(),
+            hover_color=self.theme["accent_color"],
+            text_color=self.theme["text_color"],
+            command=lambda: self.resize_library_video(-80)
+        ) if ctk else tk.Button(video_toolbar, text="−", command=lambda: self.resize_library_video(-80))
+        self.btn_video_smaller.pack(side="left", padx=2)
+
+        self.btn_video_larger = ctk.CTkButton(
+            video_toolbar,
+            text="＋",
+            width=34,
+            height=30,
+            corner_radius=8,
+            fg_color=self.get_card_hover_color(),
+            hover_color=self.theme["accent_color"],
+            text_color=self.theme["text_color"],
+            command=lambda: self.resize_library_video(80)
+        ) if ctk else tk.Button(video_toolbar, text="+", command=lambda: self.resize_library_video(80))
+        self.btn_video_larger.pack(side="left", padx=2)
+
+        self.btn_video_expand = ctk.CTkButton(
+            video_toolbar,
+            text="Expandir",
+            width=92,
+            height=30,
+            corner_radius=8,
+            fg_color=self.get_card_hover_color(),
+            hover_color=self.theme["accent_color"],
+            text_color=self.theme["text_color"],
+            command=self.toggle_library_video_expanded
+        ) if ctk else tk.Button(video_toolbar, text="Expandir", command=self.toggle_library_video_expanded)
+        self.btn_video_expand.pack(side="left", padx=(2, 0))
+
         stage = ctk.CTkFrame(page, fg_color="transparent") if ctk else tk.Frame(page, bg=self.theme["card_color"])
         stage.pack(fill="x", pady=(0, 8))
-        stage.grid_columnconfigure(0, weight=7, uniform="media_stage")
-        stage.grid_columnconfigure(1, weight=5, uniform="media_stage")
-        stage.grid_rowconfigure(0, minsize=260)
+        stage.grid_columnconfigure(0, weight=9, uniform="media_stage")
+        stage.grid_columnconfigure(1, weight=4, uniform="media_stage")
+        stage.grid_rowconfigure(0, minsize=self.library_video_height)
+        self.library_stage = stage
 
         self.library_video_frame = ctk.CTkFrame(
             stage,
-            height=260,
+            height=self.library_video_height,
             fg_color="#050608",
             corner_radius=8,
             border_width=1,
             border_color=self.theme["border_color"]
         ) if ctk else tk.Frame(stage, height=260, bg="#050608")
-        self.library_video_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        self.library_video_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6), columnspan=2 if self.library_video_expanded else 1)
         self.library_video_frame.grid_propagate(False)
 
         self.library_video_canvas = tk.Frame(self.library_video_frame, bg="#050608", highlightthickness=0)
@@ -1569,7 +1614,11 @@ class VideoMusicApp:
             border_width=1,
             border_color=self.theme["border_color"]
         ) if ctk else tk.Frame(stage, bg=self.theme["card_hover"])
-        now_playing_box.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+        self.library_controls_box = now_playing_box
+        if self.library_video_expanded:
+            now_playing_box.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=(6, 0))
+        else:
+            now_playing_box.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
 
         self.lbl_track_title = ctk.CTkLabel(
             now_playing_box, 
@@ -1683,6 +1732,22 @@ class VideoMusicApp:
         self.media_listbox.bind("<Double-Button-1>", lambda e: self.play_selected_track())
 
         return page
+
+    def resize_library_video(self, amount):
+        self.library_video_height = max(280, min(680, self.library_video_height + amount))
+        self.library_video_frame.configure(height=self.library_video_height)
+        self.library_stage.grid_rowconfigure(0, minsize=self.library_video_height)
+
+    def toggle_library_video_expanded(self):
+        self.library_video_expanded = not self.library_video_expanded
+        if self.library_video_expanded:
+            self.library_video_frame.grid_configure(column=0, columnspan=2, padx=0)
+            self.library_controls_box.grid_configure(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=(6, 0))
+            self.btn_video_expand.configure(text="Reduzir")
+        else:
+            self.library_video_frame.grid_configure(column=0, columnspan=1, padx=(0, 6))
+            self.library_controls_box.grid_configure(row=0, column=1, columnspan=1, sticky="nsew", padx=(6, 0), pady=0)
+            self.btn_video_expand.configure(text="Expandir")
 
     def add_media_files(self):
         files = filedialog.askopenfilenames(
