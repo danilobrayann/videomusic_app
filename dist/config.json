@@ -1,12 +1,12 @@
 {
-    "theme": "Laranje (Vencord Gamer)",
+    "theme": "Laranje (Vencord Style)",
     "wallpaper_path": "C:/Users/danil/OneDrive/Imagens/legendary-master-kakashi-5k-uf.jpg",
     "wallpaper_dim": 0.45,
     "wallpaper_blur": 0,
     "transparency_mode": "solid",
-    "window_alpha": 1.0,
-    "download_dir": "C:\\Users\\danil\\Downloads",
+    "window_alpha": 0.8238841978287093,
+    "download_dir": "C:/Users/danil/Downloads",
     "create_playlist_folder": true,
-    "last_iptv_url": "nasa.gov/multimedia/nasatv",
+    "last_iptv_url": "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
     "iptv_engine": "auto"
 }

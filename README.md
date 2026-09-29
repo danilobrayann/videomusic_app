@@ -87,3 +87,11 @@ Na aba **"🖼️ Papel de Parede"**:
   - Controles de Tocar, Pausar, Parar, Próxima e Anterior.
   - Controle de volume com slider.
   - Clique duplo na lista para tocar a faixa selecionada.
+
+---
+
+## Assistir ao Vivo
+
+- Abra **Assistir ao vivo**, cole o link de um canal ou de uma transmissão do YouTube ou da Twitch e clique em **Assistir**.
+- Com VLC e `yt-dlp` disponíveis, a reprodução é feita no player integrado. Se o link não puder ser reproduzido dentro do app, ele é aberto no navegador.
+- Não é necessário informar chave de transmissão: esta área serve para assistir, não para publicar lives.

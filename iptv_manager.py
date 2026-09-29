@@ -443,6 +443,20 @@ class EmbeddedVLCPlayer:
         except Exception as e:
             return False, f"Erro ao reproduzir no VLC: {e}"
 
+    def play_file(self, file_path):
+        if not self.player or not self.instance:
+            return False, "VLC não está disponível para reprodução interna."
+
+        try:
+            media = self.instance.media_new_path(os.path.abspath(file_path))
+            self.player.set_media(media)
+            self.player.play()
+            self.is_playing = True
+            self.is_paused = False
+            return True, "Reprodução iniciada."
+        except Exception as e:
+            return False, f"Erro ao reproduzir vídeo: {e}"
+
     def pause(self):
         if self.player:
             self.player.pause()

@@ -1,9 +1,12 @@
 import os
 import sys
 import json
+import colorsys
+import random
 import threading
 import time
 import re
+import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, colorchooser, simpledialog
 
@@ -27,6 +30,7 @@ class VideoMusicApp:
         self.theme_mgr = ThemeManager()
         self.wallpaper_mgr = WallpaperManager()
         self.iptv_mgr = IPTVManager()
+        self._closing = False
         
         # Carregar configurações
         self.config = self.load_config()
@@ -47,9 +51,9 @@ class VideoMusicApp:
         else:
             self.root = tk.Tk()
 
-        self.root.title("⚡ VIDEOMUSIC // GAMER HUD - Player, Downloader & Live TV")
-        self.root.geometry("1140x740")
-        self.root.minsize(940, 640)
+        self.root.title("VideoMusic Player | Biblioteca de mídia")
+        self.root.geometry("1360x860")
+        self.root.minsize(1080, 700)
         
         # Gerar e Aplicar Ícone Gamer Estiloso
         if getattr(sys, 'frozen', False):
@@ -79,9 +83,13 @@ class VideoMusicApp:
         self.current_track_idx = -1
         self.is_playing = False
         self.is_paused = False
+        self.is_video_playing = False
+        self.library_video_player = None
+        self.playback_color_after = None
 
         # Estado do Player IPTV / Live
         self.vlc_player = None
+        self.watch_vlc_player = None
         self.current_iptv_stream = None
         self.current_iptv_name = "Nenhum canal ativo"
         self.iptv_volume = 80
@@ -103,6 +111,7 @@ class VideoMusicApp:
         # Vincular redimensionamento para wallpaper responsivo
         self.root.bind("<Configure>", self.on_window_resize)
         self.last_resize_time = 0
+        self.root.protocol("WM_DELETE_WINDOW", self.close_app)
 
     def load_config(self):
         default_cfg = {
@@ -173,6 +182,8 @@ class VideoMusicApp:
     # INTERFACE PRINCIPAL GAMER HUD
     # ==========================
     def setup_ui(self):
+        self.rgb_input_widgets = []
+        self.rgb_phase = 0.0
         # 1. Camada de Fundo (Wallpaper ou Cor do Tema)
         self.bg_label = tk.Label(self.root, bg=self.theme["bg_color"])
         self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -203,19 +214,18 @@ class VideoMusicApp:
         # Telas / Abas
         self.pages = {}
         self.pages["downloader"] = self.create_downloader_page()
-        self.pages["iptv"] = self.create_iptv_page()
         self.pages["player"] = self.create_player_page()
         self.pages["themes"] = self.create_themes_page()
         self.pages["wallpaper"] = self.create_wallpaper_page()
         self.pages["installer"] = self.create_installer_page()
 
-        # Abrir na tela Downloader inicialmente
-        self.show_page("downloader")
+        self.show_page("player")
+        self.root.after(100, self._animate_rgb_inputs)
 
     def create_gamer_topbar(self):
         """Barra de status superior estilo Gamer HUD com indicadores RGB."""
-        self.topbar = ctk.CTkFrame(self.app_frame, height=44, corner_radius=0, fg_color=self.get_sidebar_color()) if ctk else tk.Frame(self.app_frame, height=44, bg=self.theme["sidebar_color"])
-        self.topbar.pack(fill="x", side="top", pady=(0, 6))
+        self.topbar = ctk.CTkFrame(self.app_frame, height=58, corner_radius=0, fg_color=self.get_sidebar_color()) if ctk else tk.Frame(self.app_frame, height=58, bg=self.theme["sidebar_color"])
+        self.topbar.pack(fill="x", side="top", pady=(0, 2))
         self.topbar.pack_propagate(False)
 
         # Logotipo Gamer
@@ -224,18 +234,18 @@ class VideoMusicApp:
 
         self.lbl_gamer_title = ctk.CTkLabel(
             top_left,
-            text="⚡ VIDEOMUSIC // GAMER HUD",
-            font=ctk.CTkFont(size=14, weight="bold"),
+            text="VIDEOMUSIC  /  PLAYER",
+            font=ctk.CTkFont(size=16, weight="bold"),
             text_color=self.theme["accent_color"]
-        ) if ctk else tk.Label(top_left, text="⚡ VIDEOMUSIC // GAMER HUD", font=("Arial", 12, "bold"), fg=self.theme["accent_color"], bg=self.theme["sidebar_color"])
+        ) if ctk else tk.Label(top_left, text="VIDEOMUSIC / PLAYER", font=("Arial", 12, "bold"), fg=self.theme["accent_color"], bg=self.theme["sidebar_color"])
         self.lbl_gamer_title.pack(side="left")
 
         lbl_version = ctk.CTkLabel(
             top_left,
-            text="[v2.5 CYBER EDITION]",
+            text="BIBLIOTECA  ·  MÍDIA LOCAL",
             font=ctk.CTkFont(size=10, weight="bold"),
             text_color=self.theme["subtext_color"]
-        ) if ctk else tk.Label(top_left, text="[v2.5]", font=("Arial", 8), fg=self.theme["subtext_color"], bg=self.theme["sidebar_color"])
+        ) if ctk else tk.Label(top_left, text="BIBLIOTECA · MÍDIA LOCAL", font=("Arial", 8), fg=self.theme["subtext_color"], bg=self.theme["sidebar_color"])
         lbl_version.pack(side="left", padx=(8, 0))
 
         # Indicadores Gamer à Direita (Status HUD)
@@ -244,26 +254,26 @@ class VideoMusicApp:
 
         self.hud_badge_fps = ctk.CTkLabel(
             top_right,
-            text="● LOW LATENCY 144Hz",
+            text="● APLICATIVO PRONTO",
             font=ctk.CTkFont(size=10, weight="bold"),
             text_color="#10b981"
-        ) if ctk else tk.Label(top_right, text="● 144Hz", fg="#10b981", bg=self.theme["sidebar_color"])
+        ) if ctk else tk.Label(top_right, text="● APLICATIVO PRONTO", fg="#10b981", bg=self.theme["sidebar_color"])
         self.hud_badge_fps.pack(side="left", padx=8)
 
         self.hud_badge_audio = ctk.CTkLabel(
             top_right,
-            text="🎧 320KBPS HI-FI",
+            text="PLAYER DE MÍDIA",
             font=ctk.CTkFont(size=10, weight="bold"),
             text_color=self.theme["accent_color"]
-        ) if ctk else tk.Label(top_right, text="🎧 320KBPS", fg=self.theme["accent_color"], bg=self.theme["sidebar_color"])
+        ) if ctk else tk.Label(top_right, text="PLAYER DE MÍDIA", fg=self.theme["accent_color"], bg=self.theme["sidebar_color"])
         self.hud_badge_audio.pack(side="left", padx=8)
 
         self.hud_badge_rgb = ctk.CTkLabel(
             top_right,
-            text="🌐 RGB SYNC: ON",
+            text="RGB INPUTS: ON",
             font=ctk.CTkFont(size=10, weight="bold"),
             text_color=self.theme["subtext_color"]
-        ) if ctk else tk.Label(top_right, text="RGB SYNC", fg=self.theme["subtext_color"], bg=self.theme["sidebar_color"])
+        ) if ctk else tk.Label(top_right, text="RGB INPUTS: ON", fg=self.theme["subtext_color"], bg=self.theme["sidebar_color"])
         self.hud_badge_rgb.pack(side="left", padx=8)
 
         # Linha RGB Neon Separadora
@@ -274,8 +284,8 @@ class VideoMusicApp:
         sidebar_bg = self.get_sidebar_color()
         self.sidebar = ctk.CTkFrame(
             self.main_container, 
-            width=230, 
-            corner_radius=12, 
+            width=220,
+            corner_radius=8,
             fg_color=sidebar_bg,
             border_width=2,
             border_color=self.theme["border_color"]
@@ -290,21 +300,20 @@ class VideoMusicApp:
 
         self.logo_label = ctk.CTkLabel(
             side_head, 
-            text="🎮 CONTROLES", 
+            text="NAVEGAÇÃO",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=self.theme["accent_color"],
             anchor="w"
-        ) if ctk else tk.Label(side_head, text="🎮 CONTROLES", font=("Arial", 12, "bold"), fg=self.theme["accent_color"], bg=self.theme["sidebar_color"])
+        ) if ctk else tk.Label(side_head, text="NAVEGAÇÃO", font=("Arial", 12, "bold"), fg=self.theme["accent_color"], bg=self.theme["sidebar_color"])
         self.logo_label.pack(anchor="w")
 
         # Botões de Navegação Gamer HUD
         nav_buttons = [
-            ("⚡ 01 // BAIXAR PLAYLIST", "downloader"),
-            ("📺 02 // TV & LIVE IPTV", "iptv"),
-            ("🎧 03 // PLAYER DE ÁUDIO", "player"),
-            ("🎨 04 // TEMAS RGB CHROMA", "themes"),
-            ("🖼️ 05 // PAPEL DE PAREDE", "wallpaper"),
-            ("🚀 06 // ATALHOS / .EXE", "installer"),
+            ("♫  Biblioteca", "player"),
+            ("↓  Downloads", "downloader"),
+            ("◈  Temas", "themes"),
+            ("▧  Papel de parede", "wallpaper"),
+            ("⚙  Aplicativo", "installer"),
         ]
 
         self.nav_widgets = {}
@@ -313,8 +322,8 @@ class VideoMusicApp:
                 btn = ctk.CTkButton(
                     self.sidebar,
                     text=text,
-                    font=ctk.CTkFont(size=12, weight="bold"),
-                    height=40,
+                    font=ctk.CTkFont(size=13, weight="bold"),
+                    height=44,
                     anchor="w",
                     corner_radius=8,
                     fg_color="transparent",
@@ -348,7 +357,7 @@ class VideoMusicApp:
 
         self.theme_badge = ctk.CTkLabel(
             footer,
-            text=f"CHROMA: {self.current_theme_name[:15]}",
+            text=f"TEMA  /  {self.current_theme_name[:18]}",
             font=ctk.CTkFont(size=10, weight="bold"),
             text_color=self.theme["subtext_color"],
             anchor="w"
@@ -357,7 +366,7 @@ class VideoMusicApp:
 
         self.mode_badge = ctk.CTkLabel(
             footer,
-            text="FUNDO: TRANSPARENTE [OK]",
+            text="INTERFACE PERSONALIZADA",
             font=ctk.CTkFont(size=10, weight="bold"),
             text_color=self.theme["accent_color"],
             anchor="w"
@@ -378,8 +387,141 @@ class VideoMusicApp:
             if ctk and page_name in self.nav_widgets:
                 self.nav_widgets[page_name].configure(
                     fg_color=self.theme["accent_color"],
-                    text_color="#000000" if self.current_theme_name.startswith("Cyberpunk") or self.current_theme_name.startswith("Razer") else "#ffffff"
+                    text_color="#101114"
                 )
+
+    def create_rgb_entry(self, parent, **kwargs):
+        if ctk:
+            kwargs.setdefault("border_width", 2)
+            kwargs.setdefault("border_color", self.theme["accent_color"])
+            entry = ctk.CTkEntry(parent, **kwargs)
+        else:
+            kwargs.setdefault("highlightthickness", 2)
+            kwargs.setdefault("highlightbackground", self.theme["accent_color"])
+            kwargs.setdefault("highlightcolor", self.theme["accent_color"])
+            kwargs.setdefault("insertbackground", self.theme["text_color"])
+            entry = tk.Entry(parent, **kwargs)
+        self.rgb_input_widgets.append(entry)
+        return entry
+
+    def _animate_rgb_inputs(self):
+        self.rgb_phase = (self.rgb_phase + 0.018) % 1.0
+        for index, entry in enumerate(self.rgb_input_widgets):
+            hue = (self.rgb_phase + index * 0.075) % 1.0
+            red, green, blue = colorsys.hsv_to_rgb(hue, 0.88, 1.0)
+            color = "#{:02x}{:02x}{:02x}".format(int(red * 255), int(green * 255), int(blue * 255))
+            try:
+                if ctk:
+                    entry.configure(border_color=color)
+                else:
+                    entry.configure(highlightbackground=color, highlightcolor=color)
+            except Exception:
+                pass
+        if self.root.winfo_exists():
+            self.root.after(80, self._animate_rgb_inputs)
+
+    def create_streaming_page(self):
+        page = ctk.CTkFrame(self.content_area, fg_color="transparent") if ctk else tk.Frame(self.content_area, bg=self.theme["card_color"])
+        title = ctk.CTkLabel(page, text="Assistir ao vivo", font=ctk.CTkFont(size=25, weight="bold"), text_color=self.theme["text_color"]) if ctk else tk.Label(page, text="Assistir ao vivo", font=("Arial", 20, "bold"), fg=self.theme["text_color"], bg=self.theme["card_color"])
+        title.pack(anchor="w", padx=16, pady=(14, 2))
+        subtitle = ctk.CTkLabel(page, text="Abra lives e canais do YouTube ou da Twitch no player do VideoMusic Studio.", font=ctk.CTkFont(size=12), text_color=self.theme["subtext_color"]) if ctk else tk.Label(page, text="Assista lives e canais do YouTube ou da Twitch no VideoMusic Studio.", fg=self.theme["subtext_color"], bg=self.theme["card_color"])
+        subtitle.pack(anchor="w", padx=16, pady=(0, 14))
+
+        controls = ctk.CTkFrame(page, fg_color=self.get_card_color(), corner_radius=8, border_width=1, border_color=self.theme["border_color"]) if ctk else tk.Frame(page, bg=self.theme["card_hover"], padx=12, pady=12)
+        controls.pack(fill="x", padx=12, pady=(0, 10))
+        prompt = ctk.CTkLabel(controls, text="LINK DO CANAL OU DA LIVE", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.theme["text_color"]) if ctk else tk.Label(controls, text="LINK DO CANAL OU DA LIVE", font=("Arial", 10, "bold"), fg=self.theme["text_color"], bg=self.theme["card_hover"])
+        prompt.pack(anchor="w", padx=12, pady=(10, 4))
+        row = ctk.CTkFrame(controls, fg_color="transparent") if ctk else tk.Frame(controls, bg=self.theme["card_hover"])
+        row.pack(fill="x", padx=12, pady=(0, 10))
+        self.watch_url_entry = self.create_rgb_entry(row, placeholder_text="Cole um link do YouTube ou Twitch", height=38) if ctk else self.create_rgb_entry(row)
+        self.watch_url_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self.watch_button = ctk.CTkButton(row, text="▶  Assistir", width=125, height=38, command=self.start_watching, fg_color=self.theme["accent_color"], text_color="#101114") if ctk else tk.Button(row, text="Assistir", command=self.start_watching)
+        self.watch_button.pack(side="left", padx=(0, 6))
+        self.watch_stop_button = ctk.CTkButton(row, text="■  Parar", width=92, height=38, command=self.stop_watching, state="disabled", fg_color=self.get_card_hover_color()) if ctk else tk.Button(row, text="Parar", command=self.stop_watching, state="disabled")
+        self.watch_stop_button.pack(side="left", padx=(0, 6))
+        self.watch_browser_button = ctk.CTkButton(row, text="Abrir no navegador", width=150, height=38, command=self.open_watch_in_browser, fg_color=self.get_card_hover_color()) if ctk else tk.Button(row, text="Abrir no navegador", command=self.open_watch_in_browser)
+        self.watch_browser_button.pack(side="left")
+
+        player_card = ctk.CTkFrame(page, fg_color=self.get_card_color(), corner_radius=8, border_width=1, border_color=self.theme["border_color"]) if ctk else tk.Frame(page, bg=self.theme["card_hover"], padx=10, pady=10)
+        player_card.pack(fill="both", expand=True, padx=12, pady=(0, 10))
+        self.watch_video_frame = ctk.CTkFrame(player_card, fg_color="#050608", corner_radius=4) if ctk else tk.Frame(player_card, bg="#050608", highlightthickness=0)
+        self.watch_video_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.watch_placeholder = ctk.CTkLabel(self.watch_video_frame, text="VIDEO PLAYER\n\nCole o link de uma live para começar", font=ctk.CTkFont(size=16, weight="bold"), text_color="#aab2bd", justify="center", fg_color="#050608") if ctk else tk.Label(self.watch_video_frame, text="VIDEO PLAYER\n\nCole o link de uma live para começar", font=("Arial", 14, "bold"), fg="#aab2bd", bg="#050608", justify="center")
+        self.watch_placeholder.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.watch_status_label = ctk.CTkLabel(page, text="PRONTO PARA ASSISTIR", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.theme["subtext_color"]) if ctk else tk.Label(page, text="PRONTO PARA ASSISTIR", fg=self.theme["subtext_color"], bg=self.theme["card_color"])
+        self.watch_status_label.pack(anchor="w", padx=16, pady=(0, 12))
+        return page
+
+    def start_watching(self):
+        url = self.watch_url_entry.get().strip()
+        if not url or not IPTVManager.is_youtube_or_twitch(url):
+            messagebox.showwarning("Link inválido", "Cole um link válido de canal, vídeo ou live do YouTube ou Twitch.")
+            return
+
+        self._set_watch_status("Resolvendo o link para reprodução...")
+        self.watch_button.configure(state="disabled")
+        threading.Thread(target=self._resolve_watch_url, args=(url,), daemon=True).start()
+
+    def _resolve_watch_url(self, url):
+        resolved_url = IPTVManager.resolve_live_stream_url(url)
+        try:
+            self.root.after(0, lambda: self._play_watch_url(url, resolved_url) if not self._closing else None)
+        except tk.TclError:
+            pass
+
+    def _play_watch_url(self, original_url, resolved_url):
+        self.watch_button.configure(state="normal")
+        if not VLC_AVAILABLE:
+            webbrowser.open(original_url)
+            self._set_watch_status("Link aberto no navegador. Instale o VLC para reprodução dentro do programa.")
+            return
+        if resolved_url == original_url:
+            webbrowser.open(original_url)
+            self._set_watch_status("Não foi possível preparar o link para o player; aberto no navegador.")
+            return
+
+        if not self.watch_vlc_player or not self.watch_vlc_player.player:
+            self.watch_vlc_player = EmbeddedVLCPlayer(self.watch_video_frame.winfo_id())
+        if self.watch_vlc_player and self.watch_vlc_player.player:
+            self.watch_placeholder.place_forget()
+            played, message = self.watch_vlc_player.play(resolved_url)
+            if played:
+                self.watch_stop_button.configure(state="normal")
+                self._set_watch_status("Reproduzindo YouTube/Twitch no player integrado.")
+                return
+            self.watch_placeholder.place(relx=0, rely=0, relwidth=1, relheight=1)
+            self._set_watch_status(f"Não foi possível reproduzir no VLC: {message}")
+
+        webbrowser.open(original_url)
+        self._set_watch_status("Player VLC indisponível; o link foi aberto no navegador.")
+
+    def stop_watching(self):
+        if self.watch_vlc_player:
+            self.watch_vlc_player.stop()
+        self.watch_placeholder.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.watch_stop_button.configure(state="disabled")
+        self._set_watch_status("Reprodução parada.")
+
+    def open_watch_in_browser(self):
+        url = self.watch_url_entry.get().strip()
+        if url and IPTVManager.is_youtube_or_twitch(url):
+            webbrowser.open(url)
+        else:
+            messagebox.showinfo("Link necessário", "Cole primeiro um link do YouTube ou Twitch.")
+
+    def _set_watch_status(self, text):
+        self.watch_status_label.configure(text=text)
+
+    def close_app(self):
+        self._closing = True
+        self._cancel_playback_color_animation()
+        if self.library_video_player:
+            self.library_video_player.stop()
+        if self.vlc_player:
+            self.vlc_player.stop()
+        if self.watch_vlc_player:
+            self.watch_vlc_player.stop()
+        self.root.destroy()
 
     # ==========================
     # ABA 1: DOWNLOADER GAMER (COM CRIAÇÃO DE PASTA DE PLAYLIST AUTOMÁTICA)
@@ -393,15 +535,15 @@ class VideoMusicApp:
 
         title = ctk.CTkLabel(
             head_box, 
-            text="⚡ BAIXAR MÚSICAS & PLAYLISTS", 
+            text="Downloads e playlists",
             font=ctk.CTkFont(size=22, weight="bold"), 
             text_color=self.theme["text_color"]
-        ) if ctk else tk.Label(head_box, text="BAIXAR PLAYLISTS & MÚSICAS", font=("Arial", 18, "bold"), fg=self.theme["text_color"], bg=self.theme["card_color"])
+        ) if ctk else tk.Label(head_box, text="Downloads e playlists", font=("Arial", 18, "bold"), fg=self.theme["text_color"], bg=self.theme["card_color"])
         title.pack(side="left")
 
         tag_dl = ctk.CTkLabel(
             head_box,
-            text="[ ULTRA YT-DLP ENGINE ]",
+            text="YT-DLP",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color=self.theme["accent_color"]
         ) if ctk else tk.Label(head_box, text="[ ULTRA YT-DLP ]", fg=self.theme["accent_color"], bg=self.theme["card_color"])
@@ -425,12 +567,12 @@ class VideoMusicApp:
         ) if ctk else tk.Label(url_frame, text="Link do Vídeo ou Playlist:", fg=self.theme["text_color"], bg=self.theme["card_hover"])
         lbl_url.pack(anchor="w", padx=14, pady=(10, 4))
 
-        self.entry_url = ctk.CTkEntry(
+        self.entry_url = self.create_rgb_entry(
             url_frame, 
             placeholder_text="https://www.youtube.com/playlist?list=... ou link de música", 
             height=38, 
             font=ctk.CTkFont(size=13)
-        ) if ctk else tk.Entry(url_frame, font=("Arial", 12))
+        ) if ctk else self.create_rgb_entry(url_frame, font=("Arial", 12))
         self.entry_url.pack(fill="x", padx=14, pady=(0, 12))
 
         # Card 2: Configuração de Pastas & Criação Automática de Pasta para Playlist
@@ -478,12 +620,12 @@ class VideoMusicApp:
         ) if ctk else tk.Label(cust_row, text="Nome da pasta (opcional):", fg=self.theme["subtext_color"])
         lbl_cust_name.pack(side="left", padx=(0, 10))
 
-        self.entry_custom_folder = ctk.CTkEntry(
+        self.entry_custom_folder = self.create_rgb_entry(
             cust_row, 
             placeholder_text="Deixe em branco para usar o nome da Playlist automaticamente ou digite ex: 'As Melhores Músicas'", 
             height=32, 
             font=ctk.CTkFont(size=12)
-        ) if ctk else tk.Entry(cust_row)
+        ) if ctk else self.create_rgb_entry(cust_row)
         self.entry_custom_folder.pack(side="left", fill="x", expand=True)
 
         # Card 3: Formato e Diretório Raiz
@@ -566,6 +708,24 @@ class VideoMusicApp:
             self.progress_bar.set(0.0)
             self.progress_bar.pack(fill="x", padx=14, pady=(2, 8))
 
+        queue_frame = ctk.CTkFrame(status_box, fg_color="transparent") if ctk else tk.Frame(status_box, bg=self.theme["card_hover"])
+        queue_frame.pack(fill="x", padx=10, pady=(0, 8))
+        self.download_listbox = tk.Listbox(
+            queue_frame,
+            height=8,
+            bg=self.theme["card_color"],
+            fg="#00e676",
+            selectbackground="#b42318",
+            selectforeground="#ffffff",
+            relief="flat",
+            highlightthickness=0,
+            font=("Segoe UI", 10)
+        )
+        self.download_listbox.pack(side="left", fill="both", expand=True)
+        queue_scrollbar = tk.Scrollbar(queue_frame, orient="vertical", command=self.download_listbox.yview)
+        queue_scrollbar.pack(side="right", fill="y")
+        self.download_listbox.configure(yscrollcommand=queue_scrollbar.set)
+
         # Botão de Abrir Pasta Baixada (habilitado após download)
         self.btn_open_download_folder = ctk.CTkButton(
             status_box,
@@ -622,18 +782,49 @@ class VideoMusicApp:
             self.root.after(0, lambda: self.btn_download.configure(state="normal"))
             return
 
-        # 1. Analisar se é playlist e determinar pasta de destino
+        # Analisar a playlist antes do download para preencher a fila visual.
         playlist_title = None
         is_playlist = False
+        queue_items = []
+        playlist_rows = {}
         try:
-            with yt_dlp.YoutubeDL({'quiet': True, 'extract_flat': 'in_playlist'}) as ydl:
+            inspect_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': 'in_playlist',
+                'skip_download': True,
+                'ignoreerrors': True,
+            }
+            with yt_dlp.YoutubeDL(inspect_opts) as ydl:
                 info_check = ydl.extract_info(url, download=False)
                 if info_check:
-                    if 'entries' in info_check or info_check.get('_type') == 'playlist':
+                    entries = info_check.get('entries')
+                    if entries is not None:
                         is_playlist = True
                         playlist_title = info_check.get('title')
+                        for position, entry in enumerate(entries, start=1):
+                            if not entry:
+                                continue
+                            playlist_index = entry.get('playlist_index') or position
+                            playlist_rows[playlist_index] = len(queue_items)
+                            queue_items.append({
+                                'title': entry.get('title') or f'Música {position}',
+                                'status': 'AGUARDANDO',
+                                'color': '#00e676',
+                            })
+                    else:
+                        queue_items.append({
+                            'title': info_check.get('title') or 'Mídia',
+                            'status': 'AGUARDANDO',
+                            'color': '#00e676',
+                        })
         except Exception as e:
             print(f"Aviso na verificação de playlist: {e}")
+
+        if not queue_items:
+            queue_items = [{'title': 'Mídia do link', 'status': 'AGUARDANDO', 'color': '#00e676'}]
+            playlist_rows = {1: 0}
+        self.root.after(0, lambda items=queue_items: self._set_download_queue(items))
 
         # Se for playlist ou o usuário digitou nome personalizado, cria a subpasta
         target_dir = out_dir
@@ -653,11 +844,14 @@ class VideoMusicApp:
         self.last_downloaded_folder = target_dir
 
         self.root.after(0, lambda: self.lbl_status.configure(
-            text=f"📁 Pasta: {os.path.basename(target_dir)} | Iniciando download..."
+            text=f"📁 Pasta: {os.path.basename(target_dir)} | {len(queue_items)} música(s) na fila"
         ))
 
         def progress_hook(d):
-            if d['status'] == 'downloading':
+            info_dict = d.get('info_dict') or {}
+            playlist_index = info_dict.get('playlist_index')
+            row_index = playlist_rows.get(playlist_index, 0 if len(queue_items) == 1 else None)
+            if d.get('status') == 'downloading':
                 try:
                     total = d.get('total_bytes') or d.get('total_bytes_estimate') or 1
                     downloaded = d.get('downloaded_bytes', 0)
@@ -665,27 +859,32 @@ class VideoMusicApp:
                     speed = d.get('speed', 0) or 0
                     speed_mb = speed / (1024 * 1024)
 
-                    # Info de índice de playlist se disponível
-                    info_dict = d.get('info_dict', {})
-                    p_idx = info_dict.get('playlist_index')
-                    p_count = info_dict.get('n_entries')
-
-                    if p_idx and p_count:
-                        status_text = f"Faixa [{p_idx}/{p_count}] Baixando: {pct*100:.1f}% ({speed_mb:.2f} MB/s)"
+                    if playlist_index:
+                        status_text = f"Faixa [{playlist_index}/{len(queue_items)}] Baixando: {pct*100:.1f}% ({speed_mb:.2f} MB/s)"
                     else:
                         status_text = f"Baixando: {pct*100:.1f}% ({speed_mb:.2f} MB/s)"
 
                     self.root.after(0, lambda: self.lbl_status.configure(text=status_text))
                     if ctk:
-                        self.root.after(0, lambda: self.progress_bar.set(pct))
+                        overall_pct = ((max(playlist_index or 1, 1) - 1) + pct) / len(queue_items)
+                        self.root.after(0, lambda value=overall_pct: self.progress_bar.set(value))
+                    if row_index is not None:
+                        queue_items[row_index]['status'] = 'BAIXANDO'
+                        self.root.after(0, lambda i=row_index: self._update_download_queue_item(i, 'BAIXANDO', '#ff3b30'))
                 except Exception:
                     pass
-            elif d['status'] == 'finished':
+            elif d.get('status') == 'finished':
+                if row_index is not None:
+                    queue_items[row_index]['status'] = 'BAIXADA'
+                    self.root.after(0, lambda i=row_index: self._update_download_queue_item(i, 'BAIXADA', '#ff3b30'))
                 self.root.after(0, lambda: self.lbl_status.configure(text="Convertendo formato final e salvando tags..."))
+            elif d.get('status') == 'error' and row_index is not None:
+                queue_items[row_index]['status'] = 'FALHA'
+                self.root.after(0, lambda i=row_index: self._update_download_queue_item(i, 'FALHA', '#ff3b30'))
 
         # Template de saída
-        if is_playlist or custom_folder_name:
-            outtmpl = os.path.join(target_dir, '%(playlist_index&{:02d} - |)s%(title)s.%(ext)s')
+        if is_playlist:
+            outtmpl = os.path.join(target_dir, '%(playlist_index)02d - %(title)s.%(ext)s')
         else:
             outtmpl = os.path.join(target_dir, '%(title)s.%(ext)s')
 
@@ -726,15 +925,39 @@ class VideoMusicApp:
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                item_title = info.get('title', 'Mídia') if info else 'Playlist'
-                self.root.after(0, lambda: self._on_download_success(item_title, target_dir))
+                downloaded_count = sum(item['status'] == 'BAIXADA' for item in queue_items)
+                failed_count = sum(item['status'] == 'FALHA' for item in queue_items)
+                item_title = f"{downloaded_count}/{len(queue_items)} músicas concluídas"
+                if failed_count:
+                    item_title += f" ({failed_count} com falha)"
+                self.root.after(0, lambda: self._on_download_success(item_title, target_dir, bool(failed_count)))
         except Exception as e:
             err_msg = str(e)
             self.root.after(0, lambda: self._on_download_error(err_msg))
 
-    def _on_download_success(self, title, target_dir):
+    def _set_download_queue(self, queue_items):
+        self.download_queue = queue_items
+        self.download_listbox.delete(0, tk.END)
+        for index, item in enumerate(queue_items, start=1):
+            self.download_listbox.insert(tk.END, f"{index:02d}. [{item['status']}] {item['title']}")
+            self.download_listbox.itemconfigure(index - 1, foreground=item['color'])
+
+    def _update_download_queue_item(self, index, status, color):
+        if index < 0 or index >= len(self.download_queue):
+            return
+        item = self.download_queue[index]
+        item['status'] = status
+        item['color'] = color
+        self.download_listbox.delete(index)
+        self.download_listbox.insert(index, f"{index + 1:02d}. [{status}] {item['title']}")
+        self.download_listbox.itemconfigure(index, foreground=color)
+
+    def _on_download_success(self, title, target_dir, has_failures=False):
         folder_name = os.path.basename(target_dir)
-        self.lbl_status.configure(text=f"✅ Concluído! Salvo na pasta: {folder_name}")
+        if has_failures:
+            self.lbl_status.configure(text=f"⚠️ Download parcial: {title} | Pasta: {folder_name}")
+        else:
+            self.lbl_status.configure(text=f"✅ {title} | Salvo na pasta: {folder_name}")
         if ctk:
             self.progress_bar.set(1.0)
         self.btn_download.configure(state="normal")
@@ -742,10 +965,11 @@ class VideoMusicApp:
         # Exibir botão para abrir pasta
         self.btn_open_download_folder.pack(pady=(4, 8))
 
-        messagebox.showinfo(
-            "Download Concluído!", 
-            f"Download finalizado com sucesso!\n\n📁 Pasta criada/usada:\n{target_dir}\n\nItem: {title}"
-        )
+        message = f"Download finalizado.\n\n📁 Pasta criada/usada:\n{target_dir}\n\nResultado: {title}"
+        if has_failures:
+            messagebox.showwarning("Download Parcial", message)
+        else:
+            messagebox.showinfo("Download Concluído!", message)
 
     def _on_download_error(self, err_msg):
         self.lbl_status.configure(text="❌ Erro durante o download.")
@@ -769,6 +993,8 @@ class VideoMusicApp:
     # ABA 2: TV AO VIVO & IPTV
     # ==========================
     def create_iptv_page(self):
+        if not hasattr(self, "iptv_volume"):
+            self.iptv_volume = 80
         page = ctk.CTkFrame(self.content_area, fg_color="transparent") if ctk else tk.Frame(self.content_area, bg=self.theme["card_color"])
 
         # Cabeçalho Gamer
@@ -777,7 +1003,7 @@ class VideoMusicApp:
 
         lbl_title = ctk.CTkLabel(
             header, 
-            text="📺 TV AO VIVO & TRANSMISSÕES IPTV", 
+            text="TV e canais ao vivo",
             font=ctk.CTkFont(size=22, weight="bold"), 
             text_color=self.theme["text_color"]
         ) if ctk else tk.Label(header, text="TV Ao Vivo & IPTV", font=("Arial", 18, "bold"), fg=self.theme["text_color"])
@@ -785,7 +1011,7 @@ class VideoMusicApp:
 
         lbl_live_badge = ctk.CTkLabel(
             header,
-            text="[ ● LIVE HUD HLS/IPTV ENGINE ]",
+            text="CANAIS AO VIVO",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color=self.theme["accent_color"]
         ) if ctk else tk.Label(header, text="● AO VIVO", fg=self.theme["accent_color"])
@@ -816,12 +1042,12 @@ class VideoMusicApp:
         input_row.pack(fill="x")
 
         saved_url = self.config.get("last_iptv_url", "https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8")
-        self.entry_iptv_url = ctk.CTkEntry(
+        self.entry_iptv_url = self.create_rgb_entry(
             input_row, 
             placeholder_text="Cole o link aqui (Ex: https://.../stream.m3u8 ou YouTube Live)", 
             height=38, 
             font=ctk.CTkFont(size=13)
-        ) if ctk else tk.Entry(input_row, font=("Arial", 12))
+        ) if ctk else self.create_rgb_entry(input_row, font=("Arial", 12))
         self.entry_iptv_url.insert(0, saved_url)
         self.entry_iptv_url.pack(side="left", fill="x", expand=True, padx=(0, 8))
 
@@ -886,7 +1112,7 @@ class VideoMusicApp:
 
         self.lbl_iptv_status_badge = ctk.CTkLabel(
             status_bar,
-            text="● STREAM HUD",
+            text="PLAYER DE CANAIS",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color="#ff0044"
         ) if ctk else tk.Label(status_bar, text="● AO VIVO", fg="#ff0044")
@@ -1034,12 +1260,12 @@ class VideoMusicApp:
         search_frame = ctk.CTkFrame(guide_panel, fg_color="transparent") if ctk else tk.Frame(guide_panel, bg=self.theme["card_hover"])
         search_frame.pack(fill="x", padx=12, pady=(0, 6))
 
-        self.entry_channel_search = ctk.CTkEntry(
+        self.entry_channel_search = self.create_rgb_entry(
             search_frame, 
             placeholder_text="🔍 Buscar canal...", 
             height=32, 
             font=ctk.CTkFont(size=12)
-        ) if ctk else tk.Entry(search_frame)
+        ) if ctk else self.create_rgb_entry(search_frame)
         self.entry_channel_search.pack(fill="x")
         self.entry_channel_search.bind("<KeyRelease>", lambda e: self.filter_channels_list())
 
@@ -1289,43 +1515,74 @@ class VideoMusicApp:
         page = ctk.CTkFrame(self.content_area, fg_color="transparent") if ctk else tk.Frame(self.content_area, bg=self.theme["card_color"])
 
         head_box = ctk.CTkFrame(page, fg_color="transparent") if ctk else tk.Frame(page, bg=self.theme["card_color"])
-        head_box.pack(fill="x", pady=(2, 10))
+        head_box.pack(fill="x", pady=(2, 8))
 
         title = ctk.CTkLabel(
             head_box, 
-            text="🎧 PLAYER DE ÁUDIO & MÍDIA LOCAL", 
-            font=ctk.CTkFont(size=22, weight="bold"), 
+            text="Biblioteca de mídia",
+            font=ctk.CTkFont(size=22, weight="bold"),
             text_color=self.theme["text_color"]
         ) if ctk else tk.Label(head_box, text="PLAYER DE ÁUDIO", font=("Arial", 18, "bold"), fg=self.theme["text_color"])
         title.pack(side="left")
 
         tag_pl = ctk.CTkLabel(
             head_box,
-            text="[ PYGAME HI-FI SOUND ENGINE ]",
+            text="PLAYER DE MÍDIA",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color=self.theme["accent_color"]
-        ) if ctk else tk.Label(head_box, text="[ HI-FI AUDIO ]", fg=self.theme["accent_color"])
+        ) if ctk else tk.Label(head_box, text="[ MÍDIA LOCAL ]", fg=self.theme["accent_color"])
         tag_pl.pack(side="right", padx=6)
 
-        now_playing_box = ctk.CTkFrame(
-            page, 
-            fg_color=self.get_card_color(), 
-            corner_radius=12,
-            border_width=2,
+        stage = ctk.CTkFrame(page, fg_color="transparent") if ctk else tk.Frame(page, bg=self.theme["card_color"])
+        stage.pack(fill="x", pady=(0, 8))
+        stage.grid_columnconfigure(0, weight=7, uniform="media_stage")
+        stage.grid_columnconfigure(1, weight=5, uniform="media_stage")
+        stage.grid_rowconfigure(0, minsize=260)
+
+        self.library_video_frame = ctk.CTkFrame(
+            stage,
+            height=260,
+            fg_color="#050608",
+            corner_radius=8,
+            border_width=1,
             border_color=self.theme["border_color"]
-        ) if ctk else tk.Frame(page, bg=self.theme["card_hover"])
-        now_playing_box.pack(fill="x", pady=6, padx=4)
+        ) if ctk else tk.Frame(stage, height=260, bg="#050608")
+        self.library_video_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        self.library_video_frame.grid_propagate(False)
+
+        self.library_video_canvas = tk.Frame(self.library_video_frame, bg="#050608", highlightthickness=0)
+        self.library_video_canvas.pack(fill="both", expand=True)
+        self.library_video_placeholder = ctk.CTkLabel(
+            self.library_video_frame,
+            text="▶\nVÍDEO LOCAL\nSelecione um vídeo na fila",
+            font=ctk.CTkFont(size=15, weight="bold"),
+            text_color=self.theme["subtext_color"],
+            fg_color="#050608",
+            justify="center"
+        ) if ctk else tk.Label(self.library_video_frame, text="VÍDEO LOCAL\nSelecione um vídeo na fila", fg=self.theme["subtext_color"], bg="#050608", justify="center")
+        self.library_video_placeholder.place(relx=0.5, rely=0.5, anchor="center")
+
+        now_playing_box = ctk.CTkFrame(
+            stage,
+            fg_color=self.get_card_color(),
+            corner_radius=8,
+            border_width=1,
+            border_color=self.theme["border_color"]
+        ) if ctk else tk.Frame(stage, bg=self.theme["card_hover"])
+        now_playing_box.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
 
         self.lbl_track_title = ctk.CTkLabel(
             now_playing_box, 
             text="Nenhuma música selecionada", 
-            font=ctk.CTkFont(size=15, weight="bold"), 
-            text_color=self.theme["accent_color"]
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=self.theme["accent_color"],
+            wraplength=330,
+            justify="center"
         ) if ctk else tk.Label(now_playing_box, text="Nenhuma música selecionada", font=("Arial", 14, "bold"), fg=self.theme["accent_color"])
-        self.lbl_track_title.pack(pady=(14, 6))
+        self.lbl_track_title.pack(fill="x", padx=12, pady=(18, 12))
 
         controls_frame = ctk.CTkFrame(now_playing_box, fg_color="transparent") if ctk else tk.Frame(now_playing_box, bg=self.theme["card_hover"])
-        controls_frame.pack(pady=(6, 14))
+        controls_frame.pack(pady=(6, 16))
 
         btn_prev = ctk.CTkButton(
             controls_frame, 
@@ -1381,7 +1638,7 @@ class VideoMusicApp:
 
         # Volume Slider
         vol_frame = ctk.CTkFrame(now_playing_box, fg_color="transparent") if ctk else tk.Frame(now_playing_box, bg=self.theme["card_hover"])
-        vol_frame.pack(fill="x", padx=30, pady=(0, 12))
+        vol_frame.pack(fill="x", padx=16, pady=(0, 14))
 
         lbl_vol = ctk.CTkLabel(vol_frame, text="Volume: 🔊", font=ctk.CTkFont(size=12), text_color=self.theme["subtext_color"]) if ctk else tk.Label(vol_frame, text="Volume:")
         lbl_vol.pack(side="left", padx=6)
@@ -1393,15 +1650,17 @@ class VideoMusicApp:
 
         # Playlist Header
         playlist_header = ctk.CTkFrame(page, fg_color="transparent") if ctk else tk.Frame(page, bg=self.theme["card_color"])
-        playlist_header.pack(fill="x", pady=(10, 4))
+        playlist_header.pack(fill="x", pady=(4, 4))
 
-        lbl_pl = ctk.CTkLabel(playlist_header, text="Fila de Reprodução:", font=ctk.CTkFont(size=13, weight="bold"), text_color=self.theme["text_color"]) if ctk else tk.Label(playlist_header, text="Fila de Reprodução:", fg=self.theme["text_color"])
+        lbl_pl = ctk.CTkLabel(playlist_header, text="Fila de reprodução", font=ctk.CTkFont(size=13, weight="bold"), text_color=self.theme["text_color"]) if ctk else tk.Label(playlist_header, text="Fila de reprodução", fg=self.theme["text_color"])
         lbl_pl.pack(side="left")
 
         btn_add_files = ctk.CTkButton(
             playlist_header, 
-            text="➕ Adicionar Músicas / Vídeos", 
-            width=190, 
+            text="＋  Adicionar mídia",
+            width=170,
+            height=36,
+            corner_radius=8,
             fg_color=self.theme["accent_color"], 
             hover_color=self.theme["accent_hover"],
             text_color="#000000" if self.current_theme_name.startswith("Cyberpunk") or self.current_theme_name.startswith("Razer") else "#ffffff",
@@ -1428,20 +1687,27 @@ class VideoMusicApp:
     def add_media_files(self):
         files = filedialog.askopenfilenames(
             title="Selecionar Músicas ou Vídeos",
-            filetypes=[("Arquivos de Áudio/Vídeo", "*.mp3;*.wav;*.ogg;*.flac;*.mp4;*.mkv;*.avi"), ("Todos os Arquivos", "*.*")]
+            filetypes=[("Áudio e vídeo", "*.mp3;*.wav;*.ogg;*.flac;*.mp4;*.mkv;*.avi;*.webm;*.mov;*.m4v;*.wmv"), ("Todos os arquivos", "*.*")]
         )
         if files:
             for f in files:
                 self.playlist.append(f)
-                self.media_listbox.insert(tk.END, f"🎵 {os.path.basename(f)}")
+                media_icon = "▶" if os.path.splitext(f)[1].lower() in {".mp4", ".mkv", ".avi", ".webm", ".mov", ".m4v", ".wmv"} else "♫"
+                self.media_listbox.insert(tk.END, f"{media_icon}  {os.path.basename(f)}")
 
     def toggle_play_pause(self):
-        if not PYGAME_AVAILABLE:
-            messagebox.showwarning("Aviso", "Pygame não está instalado.")
+        if not self.playlist:
+            messagebox.showinfo("Fila vazia", "Adicione arquivos de áudio ou vídeo à fila.")
             return
 
-        if not self.playlist:
-            messagebox.showinfo("Fila Vazia", "Adicione músicas à fila clicando em '➕ Adicionar Músicas'.")
+        if self.is_video_playing and self.library_video_player:
+            self.library_video_player.pause()
+            self.is_paused = self.library_video_player.is_paused
+            self.btn_play_pause.configure(text="▶️ Retomar" if self.is_paused else "⏸️ Pausar")
+            return
+
+        if not PYGAME_AVAILABLE:
+            messagebox.showwarning("Aviso", "Pygame não está instalado para reproduzir áudio.")
             return
 
         if self.is_playing:
@@ -1449,29 +1715,57 @@ class VideoMusicApp:
                 pygame.mixer.music.unpause()
                 self.is_paused = False
                 self.btn_play_pause.configure(text="⏸️ Pausar")
+                self._schedule_playback_color_animation()
             else:
                 pygame.mixer.music.pause()
                 self.is_paused = True
                 self.btn_play_pause.configure(text="▶️ Retomar")
+                self._cancel_playback_color_animation()
+                self._restore_player_accent()
         else:
             if self.current_track_idx < 0 and self.playlist:
                 self.current_track_idx = 0
             self.play_track(self.current_track_idx)
 
     def play_track(self, index):
-        if not PYGAME_AVAILABLE or index < 0 or index >= len(self.playlist):
+        if index < 0 or index >= len(self.playlist):
             return
 
         track_path = self.playlist[index]
         ext = os.path.splitext(track_path)[1].lower()
 
-        if ext in [".mp4", ".mkv", ".avi", ".webm"]:
-            try:
-                os.startfile(track_path)
-                self.lbl_track_title.configure(text=f"🎬 Reproduzindo vídeo: {os.path.basename(track_path)}")
+        if ext in {".mp4", ".mkv", ".avi", ".webm", ".mov", ".m4v", ".wmv"}:
+            self.stop_playback()
+            if not VLC_AVAILABLE:
+                messagebox.showwarning("VLC indisponível", "Instale o VLC Media Player para reproduzir vídeos dentro da biblioteca.")
                 return
-            except Exception as e:
-                print(f"Erro ao abrir vídeo: {e}")
+
+            self.root.update_idletasks()
+            if not self.library_video_player:
+                self.library_video_player = EmbeddedVLCPlayer(self.library_video_canvas.winfo_id())
+                if ctk and hasattr(self, "vol_slider"):
+                    self.library_video_player.set_volume(int(self.vol_slider.get() * 100))
+            ok, message = self.library_video_player.play_file(os.path.abspath(track_path))
+            if not ok:
+                messagebox.showerror("Erro ao reproduzir vídeo", message)
+                return
+
+            self.is_video_playing = True
+            self.is_paused = False
+            self.current_track_idx = index
+            self.library_video_placeholder.place_forget()
+            self.lbl_track_title.configure(text=f"🎬  {os.path.basename(track_path)}")
+            self.btn_play_pause.configure(text="⏸️ Pausar")
+            self.media_listbox.selection_clear(0, tk.END)
+            self.media_listbox.selection_set(index)
+            self.media_listbox.see(index)
+            return
+
+        if not PYGAME_AVAILABLE:
+            messagebox.showwarning("Aviso", "Pygame não está instalado para reproduzir áudio.")
+            return
+
+        self.stop_playback()
 
         try:
             pygame.mixer.music.load(track_path)
@@ -1481,9 +1775,11 @@ class VideoMusicApp:
             self.current_track_idx = index
             self.btn_play_pause.configure(text="⏸️ Pausar")
             self.lbl_track_title.configure(text=f"🎶 Tocando: {os.path.basename(track_path)}")
+            self.library_video_placeholder.place(relx=0.5, rely=0.5, anchor="center")
             self.media_listbox.selection_clear(0, tk.END)
             self.media_listbox.selection_set(index)
             self.media_listbox.see(index)
+            self._schedule_playback_color_animation()
         except Exception as e:
             messagebox.showerror("Erro ao Tocar", f"Falha ao reproduzir áudio: {e}")
 
@@ -1493,12 +1789,70 @@ class VideoMusicApp:
             self.play_track(sel[0])
 
     def stop_playback(self):
+        self._cancel_playback_color_animation()
+        if self.is_video_playing and self.library_video_player:
+            self.library_video_player.stop()
+            self.is_video_playing = False
+            self.library_video_placeholder.place(relx=0.5, rely=0.5, anchor="center")
         if PYGAME_AVAILABLE and self.is_playing:
             pygame.mixer.music.stop()
-            self.is_playing = False
-            self.is_paused = False
-            self.btn_play_pause.configure(text="▶️ Tocar")
-            self.lbl_track_title.configure(text="Reprodução interrompida.")
+        self.is_playing = False
+        self.is_paused = False
+        self.btn_play_pause.configure(text="▶️ Tocar")
+        self.lbl_track_title.configure(text="Reprodução interrompida.")
+        self._restore_player_accent()
+
+    def _schedule_playback_color_animation(self):
+        self._cancel_playback_color_animation()
+        self.playback_color_after = self.root.after(100, self._animate_playback_color)
+
+    def _cancel_playback_color_animation(self):
+        if self.playback_color_after:
+            try:
+                self.root.after_cancel(self.playback_color_after)
+            except Exception:
+                pass
+            self.playback_color_after = None
+
+    def _restore_player_accent(self):
+        if not hasattr(self, "lbl_track_title"):
+            return
+        accent = self.theme["accent_color"]
+        if ctk:
+            self.lbl_track_title.configure(text_color=accent)
+            self.library_video_frame.configure(border_color=self.theme["border_color"])
+            self.btn_play_pause.configure(fg_color=accent)
+            self.rgb_line.configure(fg_color=accent)
+        else:
+            self.lbl_track_title.configure(fg=accent)
+            self.rgb_line.configure(bg=accent)
+
+    def _animate_playback_color(self):
+        self.playback_color_after = None
+        if self._closing or not self.is_playing or self.is_paused:
+            self._restore_player_accent()
+            return
+
+        try:
+            if not pygame.mixer.music.get_busy():
+                self.is_playing = False
+                self.btn_play_pause.configure(text="▶️ Tocar")
+                self._restore_player_accent()
+                return
+        except Exception:
+            self._restore_player_accent()
+            return
+
+        accent = random.choice(("#00e676", "#00c8ff", "#ff3d81", "#ffb000", "#a6ff00", "#36f1cd"))
+        if ctk:
+            self.lbl_track_title.configure(text_color=accent)
+            self.library_video_frame.configure(border_color=accent)
+            self.btn_play_pause.configure(fg_color=accent)
+            self.rgb_line.configure(fg_color=accent)
+        else:
+            self.lbl_track_title.configure(fg=accent)
+            self.rgb_line.configure(bg=accent)
+        self.playback_color_after = self.root.after(650, self._animate_playback_color)
 
     def play_next_track(self):
         if self.playlist and self.current_track_idx < len(self.playlist) - 1:
@@ -1511,6 +1865,8 @@ class VideoMusicApp:
     def set_volume(self, val):
         if PYGAME_AVAILABLE:
             pygame.mixer.music.set_volume(float(val))
+        if self.library_video_player:
+            self.library_video_player.set_volume(float(val) * 100)
 
     # ==========================
     # ABA 4: TEMAS RGB CHROMA
@@ -1523,7 +1879,7 @@ class VideoMusicApp:
 
         title = ctk.CTkLabel(
             head_box, 
-            text="🎨 MOTOR DE TEMAS & RGB CHROMA", 
+            text="Aparência e temas",
             font=ctk.CTkFont(size=22, weight="bold"), 
             text_color=self.theme["text_color"]
         ) if ctk else tk.Label(head_box, text="TEMAS RGB CHROMA", font=("Arial", 18, "bold"), fg=self.theme["text_color"])
@@ -1531,7 +1887,7 @@ class VideoMusicApp:
 
         tag_th = ctk.CTkLabel(
             head_box,
-            text="[ DYNAMIC PALETTE ENGINE ]",
+            text="PERSONALIZAÇÃO",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color=self.theme["accent_color"]
         ) if ctk else tk.Label(head_box, text="[ RGB ENGINE ]", fg=self.theme["accent_color"])
@@ -1636,7 +1992,7 @@ class VideoMusicApp:
         lbl_name = ctk.CTkLabel(save_row, text="Nome do seu Perfil RGB:", font=ctk.CTkFont(size=12, weight="bold"), text_color=self.theme["text_color"]) if ctk else tk.Label(save_row, text="Nome:")
         lbl_name.pack(side="left", padx=(0, 10))
 
-        self.entry_theme_name = ctk.CTkEntry(save_row, placeholder_text="Ex: Meu Perfil Neon Cyber", width=240) if ctk else tk.Entry(save_row)
+        self.entry_theme_name = self.create_rgb_entry(save_row, placeholder_text="Ex: Meu Perfil Neon Cyber", width=240) if ctk else self.create_rgb_entry(save_row)
         self.entry_theme_name.pack(side="left", padx=(0, 12))
 
         btn_save_theme = ctk.CTkButton(
@@ -1732,7 +2088,7 @@ class VideoMusicApp:
 
         title = ctk.CTkLabel(
             head_box, 
-            text="🖼️ PAPEL DE PAREDE & TRANSPARÊNCIA CYBER", 
+            text="Papel de parede e transparência",
             font=ctk.CTkFont(size=22, weight="bold"), 
             text_color=self.theme["text_color"]
         ) if ctk else tk.Label(head_box, text="PAPEL DE PAREDE & TRANSPARÊNCIA", font=("Arial", 18, "bold"), fg=self.theme["text_color"])
@@ -1740,7 +2096,7 @@ class VideoMusicApp:
 
         tag_wp = ctk.CTkLabel(
             head_box,
-            text="[ GLASS & ALPHA CONTROLLER ]",
+            text="APARÊNCIA",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color=self.theme["accent_color"]
         ) if ctk else tk.Label(head_box, text="[ GLASS CONTROLLER ]", fg=self.theme["accent_color"])
@@ -1924,6 +2280,8 @@ class VideoMusicApp:
         messagebox.showinfo("Wallpaper", "Fundo restaurado para a cor original do tema.")
 
     def on_window_resize(self, event):
+        if self._closing:
+            return
         now = time.time()
         if now - self.last_resize_time > 0.12:
             self.last_resize_time = now
@@ -1955,7 +2313,7 @@ class VideoMusicApp:
 
         title = ctk.CTkLabel(
             head_box, 
-            text="🚀 ATALHOS NO SISTEMA & EXECUTÁVEL .EXE", 
+            text="Integração com o Windows",
             font=ctk.CTkFont(size=22, weight="bold"), 
             text_color=self.theme["text_color"]
         ) if ctk else tk.Label(head_box, text="ATALHOS & EXECUTÁVEL", font=("Arial", 18, "bold"), fg=self.theme["text_color"])
@@ -1963,7 +2321,7 @@ class VideoMusicApp:
 
         tag_in = ctk.CTkLabel(
             head_box,
-            text="[ WINDOWS INTEGRATION ]",
+            text="ATALHOS E EXECUTÁVEL",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color=self.theme["accent_color"]
         ) if ctk else tk.Label(head_box, text="[ WINDOWS ]", fg=self.theme["accent_color"])
@@ -2099,24 +2457,35 @@ class VideoMusicApp:
 
     def refresh_all_ui(self):
         """Reconstrói as páginas com os novos estilos e cores de forma transparente e fluida."""
-        current_active = "downloader"
+        current_active = "player"
         for name, frame in self.pages.items():
             if frame.winfo_ismapped():
                 current_active = name
                 break
 
+        self._cancel_playback_color_animation()
+        if self.library_video_player:
+            self.library_video_player.stop()
+            self.library_video_player = None
+            self.is_video_playing = False
+
         for frame in self.pages.values():
             frame.destroy()
 
+        if self.watch_vlc_player:
+            self.watch_vlc_player.stop()
+            self.watch_vlc_player = None
         self.pages.clear()
+        self.rgb_input_widgets = []
         self.pages["downloader"] = self.create_downloader_page()
-        self.pages["iptv"] = self.create_iptv_page()
         self.pages["player"] = self.create_player_page()
         self.pages["themes"] = self.create_themes_page()
         self.pages["wallpaper"] = self.create_wallpaper_page()
         self.pages["installer"] = self.create_installer_page()
 
         self.show_page(current_active)
+        if self.is_playing and not self.is_paused:
+            self._schedule_playback_color_animation()
 
     def run(self):
         self.root.mainloop()
